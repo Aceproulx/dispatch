@@ -1,8 +1,8 @@
 import { spawn } from "child_process";
 import type { ChildProcess } from "child_process";
-import { rmSync, readdirSync, statSync } from "fs";
-import { dirname, join } from "path";
-import { tmpdir, platform } from "os";
+import { rmSync } from "fs";
+import { dirname } from "path";
+import { platform } from "os";
 import type { SDK } from "caido:plugin";
 import type { API, Events } from "./index";
 import { insertHistoryEntry, updateHistoryEntry } from "./db";
@@ -13,8 +13,6 @@ type PluginSDK = SDK<API, Events>;
 const USE_PROCESS_GROUPS = platform() !== "win32";
 const MAX_STORED_OUTPUT = 512 * 1024; // 512KB per stream
 const MAX_CONCURRENT = 10;
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-const MAX_TEMP_AGE_MS = 10 * 60 * 1000;
 
 let sdkRef: PluginSDK | undefined;
 
@@ -377,36 +375,4 @@ function cleanupTempFiles(tempFiles: string[]): void {
       // Ignore cleanup errors
     }
   }
-}
-
-// Periodic cleanup of stale dispatch- temp directories
-function cleanupStaleTempDirs(): void {
-  try {
-    const tmp = tmpdir();
-    const entries = readdirSync(tmp);
-    const now = Date.now();
-
-    for (const entry of entries) {
-      if (!entry.startsWith("dispatch-")) continue;
-      const fullPath = join(tmp, entry);
-      try {
-        const stat = statSync(fullPath);
-        if (stat.isDirectory() && now - stat.mtimeMs > MAX_TEMP_AGE_MS) {
-          rmSync(fullPath, { recursive: true });
-        }
-      } catch {
-        // Ignore individual errors
-      }
-    }
-  } catch {
-    // Ignore cleanup errors
-  }
-}
-
-let cleanupTimer: ReturnType<typeof setInterval> | null = null;
-
-export function startPeriodicCleanup(): void {
-  if (cleanupTimer) return;
-  cleanupStaleTempDirs();
-  cleanupTimer = setInterval(cleanupStaleTempDirs, CLEANUP_INTERVAL_MS);
 }

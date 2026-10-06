@@ -32,7 +32,6 @@ import {
   releaseSlot,
   reserveSlot,
   setExecutorSdk,
-  startPeriodicCleanup,
 } from "./executor";
 import { detectAllTools } from "./detector";
 import { rmSync } from "fs";
@@ -459,5 +458,4 @@ export function init(sdk: SDK<API, Events>) {
   sdk.api.register("createFinding", createFinding);
 
   sdk.console.log("[Dispatch] Plugin initialized");
-  startPeriodicCleanup();
 }
