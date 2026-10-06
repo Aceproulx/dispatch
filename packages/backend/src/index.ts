@@ -361,11 +361,22 @@ async function detectTools(sdk: SDK): Promise<{
   results: ToolDetectionResult[];
   byToolId: ToolDetectionEntry[];
 }> {
+  // Timing is the regression tripwire: a healthy run takes hundreds of ms
+  // (real shell probes), while the env-option bug answered in ~3 ms. Log it
+  // so the difference is visible in Caido's plugin log without a debugger.
+  const started = Date.now();
   try {
     const tools = await getAllTools();
-    return await detectAllTools(tools);
+    const detected = await detectAllTools(tools);
+    const installed = detected.byToolId.filter((entry) => entry.installed).length;
+    sdk.console.log(
+      `[Dispatch] detectTools: ${installed}/${detected.byToolId.length} tools installed in ${Date.now() - started}ms`
+    );
+    return detected;
   } catch (err) {
-    sdk.console.error(`[Dispatch] detectTools: ${err}`);
+    sdk.console.error(
+      `[Dispatch] detectTools failed after ${Date.now() - started}ms: ${err}`
+    );
     return { results: [], byToolId: [] };
   }
 }
